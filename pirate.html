@@ -132,7 +132,7 @@
         }
         @keyframes segarro-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
 
-        /* ── MENÚ DE LA TENDA PAKI ─────────────────────────────────────────────
+        /* ── MENÚ DE LA BOTIGA PAKI ─────────────────────────────────────────────
            Finestra emergent dins l'escenari que apareix quan et situes
            sobre el Paki i prems ESPAI. Es tanca amb ESC. */
         #menu-paki {
@@ -275,9 +275,9 @@
     <!-- El món: conté tots els sprites. Es mou per simular la càmera -->
     <div id="mon"></div>
 
-    <!-- Menú de la tenda Paki (s'obre amb ESPAI sobre el Paki) -->
+    <!-- Menú de la botiga Paki (s'obre amb ESPAI sobre el Paki) -->
     <div id="menu-paki">
-        <h3>🏪 TENDA PAKI</h3>
+        <h3>🏪 BOTIGA PAKI</h3>
         <div class="esc-hint">Prem ESC per tancar</div>
         <button class="opcio-boto" onclick="comprarPaki('menjar')">🍞 Menjar (+3) — 1€</button>
         <button class="opcio-boto" onclick="comprarPaki('mechero')">🔥 Mechero — 10€</button>
@@ -306,7 +306,7 @@ var sortida    = document.querySelector("#sortida");        // Barra de missatge
 var interficie = document.querySelector("#interficie-joc"); // Pantalla d'inici / derrota
 var n_viu      = document.querySelector("#nivell-viu");     // Text del nivell al marcador
 var r_recursos = document.querySelector("#recursos-vius");  // Text de diners/menjar al marcador
-var menuPaki   = document.querySelector("#menu-paki");      // Finestra de la tenda Paki
+var menuPaki   = document.querySelector("#menu-paki");      // Finestra de la botiga Paki
 var msgCompra  = document.querySelector("#msg-compra");     // Feedback de compra dins el Paki
 var videoOverlay    = document.querySelector("#video-overlay");    // Overlay de kill
 var videoCelebracio = document.querySelector("#video-celebracio"); // Vídeo dins l'overlay de kill
@@ -357,7 +357,7 @@ var colisions = [
 
 // ── MAPA NIVELL 1 ─────────────────────────────────────────────────────────────
 // Defineix la posició inicial dels objectes estàtics:
-// 1=Yaya (robar diners), 2=Paki (tenda), 3=Casa (portal al nivell 2)
+// 1=Yaya (robar diners), 2=Paki (botiga), 3=Casa (portal al nivell 2)
 var mapa1 = [
     [0,0,0,0,0,0,0,0,0,0],
     [0,2,0,0,0,0,0,0,3,0],
@@ -435,6 +435,8 @@ function començarJoc() {
     jocActiu = true;
     window.addEventListener("keydown", manejadorTeclat, false);
 }
+
+//martin
 
 // ── CARREGAR NIVELL ───────────────────────────────────────────────────────────
 // Prepara el mapa, col·loca els policies i activa els intervals de moviment.
@@ -565,7 +567,7 @@ function obrirMenuPaki() {
     menuPakiObert = true;
     menuPaki.style.display = "block";
     msgCompra.innerHTML = "";
-    missatgeJoc = "🏪 Benvingut a la tenda! Els polis esperaran. ESC per tancar.";
+    missatgeJoc = "🏪 Benvingut a la botiga! Els polis esperaran. ESC per tancar.";
     renderitzar();
 }
 
@@ -573,7 +575,7 @@ function tancarMenuPaki() {
     menuPakiObert = false;
     menuPaki.style.display = "none";
     msgCompra.innerHTML = "";
-    missatgeJoc = "Has tancat la tenda.";
+    missatgeJoc = "Has tancat la botiga.";
     renderitzar();
 }
 
