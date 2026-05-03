@@ -1,387 +1,787 @@
 <!DOCTYPE html>
-<title>Island Adventure</title>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <title>Amego Simulator - Definitive Version</title>
+    <style>
+        body {
+            background-color: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ecf0f1;
+        }
 
-<style>
-#stage
-{
-    position: relative;
-    width: 384px;
-    height: 384px;
-    background-image: url("images/background.png");
-}
-.cell
-{
-    display: block;
-    position: absolute;
-    width: 64px;
-    height: 64px;
-}
-p
-{
-    width: 400px;
-}
-</style>
+        #fons-video {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            object-fit: cover;
+            opacity: 0.35;
+        }
 
-<div id="stage"></div>
-<p id="output"></p>
+        #marcador-superior {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-left: 5px solid #e67e22;
+            border-radius: 5px;
+            min-width: 220px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+
+        h1 {
+            letter-spacing: 4px;
+            font-size: 2.6em;
+            color: #ffffff;
+            text-shadow:
+                0 0 10px #e67e22,
+                0 0 25px #e67e22,
+                0 0 50px #e67e22,
+                2px 2px 0px #000,
+                -2px -2px 0px #000,
+                2px -2px 0px #000,
+                -2px 2px 0px #000;
+            margin-bottom: 20px;
+        }
+
+        #escenari {
+            position: relative;
+            width: 384px;
+            height: 384px;
+            border: 10px solid #444;
+            border-radius: 4px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            overflow: hidden;
+            background-color: transparent;
+        }
+
+        #mon {
+            position: absolute;
+            transition: transform 0.15s ease-out;
+            width: 640px;
+            height: 640px;
+            background-image: url('images/Fons.png') !important;
+            background-repeat: no-repeat !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-color: transparent !important;
+        }
+
+        #interficie-joc {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+        }
+
+        .cel·la {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            transition: all 0.15s ease-out;
+            z-index: 2;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #e67e22;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            border-bottom: 4px solid #d35400;
+        }
+        button:hover { background: #d35400; }
+
+        #sortida {
+            margin-top: 25px;
+            width: 384px;
+            text-align: center;
+            font-size: 1.1em;
+            background: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            border-bottom: 3px solid #34495e;
+        }
+
+        .positiu { color: #2ecc71; font-weight: bold; }
+        .negatiu { color: #e74c3c; font-weight: bold; }
+
+        /* ── ANIMACIÓ DEL SEGARRO ──────────────────────────────────────────────
+           El segarro (objectiu del nivell 2) parpelleja amb un glow groc
+           per destacar-lo visualment. */
+        .segarro-glow {
+            animation: segarro-pulse 1s infinite alternate;
+            filter: drop-shadow(0 0 8px #f39c12);
+        }
+        @keyframes segarro-pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+
+        /* ── MENÚ DE LA TENDA PAKI ─────────────────────────────────────────────
+           Finestra emergent dins l'escenari que apareix quan et situes
+           sobre el Paki i prems ESPAI. Es tanca amb ESC. */
+        #menu-paki {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.97);
+            border: 3px solid #e67e22;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 200;
+            text-align: center;
+            min-width: 240px;
+        }
+        #menu-paki h3 { color: #e67e22; margin: 0 0 8px 0; letter-spacing: 2px; }
+        #menu-paki .esc-hint { color: #888; font-size: 11px; margin-bottom: 12px; }
+
+        /* Botons de compra dins el menú Paki */
+        #menu-paki .opcio-boto {
+            display: block; width: 100%; margin: 8px 0; padding: 10px;
+            font-size: 15px; background: #2c3e50; color: #ecf0f1;
+            border: 2px solid #e67e22; border-radius: 4px; cursor: pointer;
+            font-family: 'Courier New', Courier, monospace; border-bottom: 2px solid #e67e22;
+        }
+        #menu-paki .opcio-boto:hover { background: #e67e22; color: #fff; }
+
+        /* Missatge de feedback de la compra (ex: "+3 menjar / -1€ ✔") */
+        #msg-compra {
+            font-size: 12px;
+            min-height: 18px;
+            margin: 6px 0 0 0;
+            color: #f5a623;
+        }
+
+        /* ── OVERLAY DE KILL (quan mats un policia) ────────────────────────────
+           Pantalla fosca a pantalla completa que reprodueix el vídeo de kill.
+           S'activa afegint la classe "actiu". */
+        #video-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.93);
+            z-index: 999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #video-overlay.actiu { display: flex; }
+        #video-overlay h2 {
+            color: #e67e22; font-size: 2em;
+            margin-bottom: 15px; letter-spacing: 3px;
+            text-shadow: 0 0 15px #e67e22;
+        }
+        #video-overlay video {
+            max-width: 600px; width: 90%;
+            border: 4px solid #e67e22; border-radius: 8px;
+            box-shadow: 0 0 40px rgba(230,126,34,0.6);
+        }
+        /* Botó per tancar l'overlay i tornar al joc */
+        #video-overlay .tancar-video {
+            margin-top: 18px; padding: 10px 28px; font-size: 16px;
+            background: #e74c3c; color: white; border: none; border-radius: 6px;
+            cursor: pointer; font-family: 'Courier New', Courier, monospace;
+            border-bottom: 3px solid #c0392b;
+        }
+        #video-overlay .tancar-video:hover { background: #c0392b; }
+        /* Comptador de kills mostrat sota el vídeo */
+        #kills-comptador { color: #2ecc71; font-size: 1.2em; margin-top: 10px; letter-spacing: 2px; }
+
+        /* ── OVERLAY DE VICTÒRIA ───────────────────────────────────────────────
+           Igual que el de kill però en verd. Es mostra quan guanyes el joc. */
+        #victoria-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.93);
+            z-index: 999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #victoria-overlay.actiu { display: flex; }
+        #victoria-overlay h2 {
+            color: #2ecc71; font-size: 2em;
+            margin-bottom: 15px; letter-spacing: 3px;
+            text-shadow: 0 0 15px #2ecc71;
+        }
+        #victoria-overlay video {
+            max-width: 600px; width: 90%;
+            border: 4px solid #2ecc71; border-radius: 8px;
+            box-shadow: 0 0 40px rgba(46,204,113,0.6);
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- Vídeo de fons animat en bucle (darrere de tot) -->
+<video id="fons-video" autoplay loop muted playsinline>
+    <source src="images/fons_animat.mp4" type="video/mp4">
+</video>
+
+<!-- Overlay que es mostra quan mates un policia amb el machete -->
+<div id="video-overlay">
+    <h2>🔪 POLICIA ELIMINAT! 🔪</h2>
+    <video id="video-celebracio" autoplay>
+        <source src="images/kill.mp4" type="video/mp4">
+    </video>
+    <div id="kills-comptador"></div>
+    <button class="tancar-video" onclick="tancarVideo()">▶ Continuar jugant</button>
+</div>
+
+<!-- Overlay que es mostra quan guanyes (arribes al segarro amb mechero) -->
+<div id="victoria-overlay">
+    <h2>🚬 HAS GUANYAT! 🚬</h2>
+    <video id="video-victoria" autoplay>
+        <source src="images/victoria.mp4" type="video/mp4">
+    </video>
+</div>
+
+<!-- Marcador fix a dalt a la dreta: nivell, diners i menjar -->
+<div id="marcador-superior">
+    <div id="nivell-viu" style="font-size: 1.5; color: #e67e22;">Nivell: 1</div>
+    <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
+    <div id="recursos-vius">
+        Diners: 0€<br>
+        Menjar: 10
+    </div>
+</div>
+
+<!-- Títol principal visible sobre l'escenari -->
+<h1>AMEGO SIMULATOR</h1>
+
+<!-- Contenidor principal del joc -->
+<div id="escenari">
+
+    <!-- El món: conté tots els sprites. Es mou per simular la càmera -->
+    <div id="mon"></div>
+
+    <!-- Menú de la tenda Paki (s'obre amb ESPAI sobre el Paki) -->
+    <div id="menu-paki">
+        <h3>🏪 TENDA PAKI</h3>
+        <div class="esc-hint">Prem ESC per tancar</div>
+        <button class="opcio-boto" onclick="comprarPaki('menjar')">🍞 Menjar (+3) — 1€</button>
+        <button class="opcio-boto" onclick="comprarPaki('mechero')">🔥 Mechero — 10€</button>
+        <button class="opcio-boto" onclick="comprarPaki('machete')">🔪 Machete — 20€</button>
+        <div id="msg-compra"></div>
+    </div>
+
+    <!-- Pantalla d'inici i de derrota (es fa invisible en iniciar el joc) -->
+    <div id="interficie-joc">
+        <h1 id="titol-pantalla">AMEGO SIMULATOR</h1>
+        <p id="text-pantalla">Fumet el cigar amb un encenedor<br>Vigila que la policia no et pilli.</p>
+        <button onclick="començarJoc()">COMENÇAR JOC</button>
+    </div>
+
+</div>
+
+<!-- Barra de missatges d'events sota l'escenari -->
+<div id="sortida">Prem el botó per iniciar</div>
 
 <script>
 
-var stage = document.querySelector("#stage");
-var output = document.querySelector("#output");
+// ── REFERÈNCIES AL DOM ────────────────────────────────────────────────────────
+// Guardem els elements HTML que modificarem sovint per no haver de cercar-los cada vegada.
+var mon        = document.querySelector("#mon");           // El mapa complet (on es mouen els sprites)
+var sortida    = document.querySelector("#sortida");        // Barra de missatges inferior
+var interficie = document.querySelector("#interficie-joc"); // Pantalla d'inici / derrota
+var n_viu      = document.querySelector("#nivell-viu");     // Text del nivell al marcador
+var r_recursos = document.querySelector("#recursos-vius");  // Text de diners/menjar al marcador
+var menuPaki   = document.querySelector("#menu-paki");      // Finestra de la tenda Paki
+var msgCompra  = document.querySelector("#msg-compra");     // Feedback de compra dins el Paki
+var videoOverlay    = document.querySelector("#video-overlay");    // Overlay de kill
+var videoCelebracio = document.querySelector("#video-celebracio"); // Vídeo dins l'overlay de kill
+var killsComptador  = document.querySelector("#kills-comptador");  // Text de kills sota el vídeo
 
-//Add a keyboard listener
-window.addEventListener("keydown", keydownHandler, false);
+// ── CONSTANTS DE TIPUS DE CEL·LA ──────────────────────────────────────────────
+// Cada número representa un tipus d'objecte/personatge al mapa.
+var YAYA = 1, PAKI = 2, CASA = 3, AMEGO = 4, POLICIA = 5, SEGARRO = 7;
 
-//The game map
-var map =
-[
-    [0, 2, 0, 0, 0, 3],
-    [0, 0, 0, 1, 0, 0],
-    [0, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 2, 0],
-    [0, 2, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 0]
+// Mida de cada cel·la en píxels i dimensions del mapa en cel·les
+var MIDA = 64, FILES = 10, COLUMNES = 10;
+
+// ── VARIABLES D'ESTAT DEL JOC ─────────────────────────────────────────────────
+var nivellActual;           // Nivell actual (1 o 2)
+var jocActiu = false;       // Si és false, el joc no processa inputs ni movent policies
+var menjar, diners;         // Recursos del jugador
+var filaAmego, columnaAmego;// Posició actual del jugador al mapa
+var policies1 = [];         // Llista de policies del nivell 1 [{fila, columna}, ...]
+var policies2 = [];         // Llista de policies del nivell 2 [{fila, columna}, ...]
+var missatgeJoc = "";       // Missatge actual a la barra inferior
+var menuPakiObert = false;  // Controla si el menú Paki és obert (bloqueja el moviment)
+var teMechero = false;      // Si el jugador ha comprat el mechero (necessari per guanyar)
+var numMachetes = 0;        // Nombre de machetes disponibles (per matar policies al nivell 2)
+var killsMachete = 0;       // Comptador total de policies eliminats amb machete
+
+// ── INTERVALS DE MOVIMENT ─────────────────────────────────────────────────────
+// Guardem les referències als intervals per poder aturar-los quan cal.
+var intervalMovPolicia = null; // Interval de moviment dels policies del nivell 1
+var intervalVelocitat  = null; // Interval que accelera els policies del nivell 1 cada 5 seg
+var intervalPolicies2  = null; // Interval de moviment dels policies del nivell 2
+var velocitatPolicia   = 800;  // Mil·lisegons entre cada moviment dels policies (menys = més ràpid)
+
+// ── MAPA DE COL·LISIONS ───────────────────────────────────────────────────────
+// 1 = mur (no es pot passar), 0 = cel·la lliure.
+// Els bordes (fila 0, fila 9, columna 0, columna 9) sempre són murs.
+var colisions = [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1]
 ];
 
-var gameObjects = 
-[
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 5, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0],
-    [4, 0, 0, 0, 0, 0]
+// ── MAPA NIVELL 1 ─────────────────────────────────────────────────────────────
+// Defineix la posició inicial dels objectes estàtics:
+// 1=Yaya (robar diners), 2=Paki (tenda), 3=Casa (portal al nivell 2)
+var mapa1 = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,2,0,0,0,0,0,0,3,0],
+    [0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0],
+    [0,1,0,0,0,0,1,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0],
+    [0,0,1,0,0,0,0,0,1,0],
+    [0,0,0,2,0,0,1,0,0,0],
+    [0,0,0,1,0,0,0,0,2,0],
+    [0,0,0,0,0,0,0,0,0,0]
 ];
 
-//Map Code
-var WATER = 0;
-var ISLAND = 1;
-var PIRATE = 2;
-var HOME = 3;
-var SHIP = 4;
-var MONSTER = 5;
- 
-//Arrow key codes
- var UP = 38;
- var DOWN = 40;
- var RIGHT = 39;
- var LEFT = 37;
+// ── MAPA NIVELL 2 ─────────────────────────────────────────────────────────────
+// Mapa buit excepte el segarro (7) a la posició [1][8].
+// L'objectiu és arribar-hi amb el mechero.
+var mapa2 = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,7,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0]
+];
 
-//The size of each cell
-var SIZE = 64;
-//Number of rows and columns
-var ROWS = map.length;
-var COLUMNS = map[0].length;
-
-//An automatic way of setting the ship's start position
-var shipRow;
-var shipColumn;
-var monsterRow;
-var monsterColumn;
-
-//The game variables
-var food = 10;
-var gold = 10;
-var experience = 0;
-var gameMessage = "Use the arrow keys to find your way home."
+// Còpies de treball del mapa (es modifiquen durant el joc, ex: Yayes robades desapareixen)
+var mapaActual, objectesActual;
 
 
-for(var row = 0; row < ROWS; row++)
-{
-    for(var column = 0; column < COLUMNS; column++)
-    {
-        if(gameObjects[row][column] === SHIP){
-            shipRow = row;
-            shipColumn = column;
-        }
-        if(gameObjects[row][column] === MONSTER){
-            monsterRow = row;
-            monsterColumn = column;
-        }
-    }
+// ── NETEJAR INTERVALS ─────────────────────────────────────────────────────────
+// Atura tots els intervals actius. S'usa en canviar de nivell o acabar el joc.
+function netarIntervals() {
+    if(intervalMovPolicia) { clearInterval(intervalMovPolicia); intervalMovPolicia = null; }
+    if(intervalVelocitat)  { clearInterval(intervalVelocitat);  intervalVelocitat  = null; }
+    if(intervalPolicies2)  { clearInterval(intervalPolicies2);  intervalPolicies2  = null; }
 }
 
 
-render();
+// ── TANCAR OVERLAY DE KILL ────────────────────────────────────────────────────
+// Amaga el vídeo de kill i reprèn el joc.
+function tancarVideo() {
+    videoOverlay.classList.remove("actiu");
+    videoCelebracio.pause();
+    videoCelebracio.currentTime = 0;
+    jocActiu = true;
+}
 
-function keydownHandler(event)
-{
-    switch(event.keyCode)
-    {
-        case UP:
-            if(shipRow > 0){
-                gameObjects[shipRow][shipColumn] = 0;
-                shipRow--;
-                gameObjects[shipRow][shipColumn] = SHIP;
-                food--;
+// ── MOSTRAR OVERLAY DE KILL ───────────────────────────────────────────────────
+// Pausa el joc, actualitza el comptador de kills i reprodueix el vídeo.
+function mostrarVideoKill() {
+    jocActiu = false;
+    killsComptador.innerHTML = "🔪 Policies eliminats: <strong>" + killsMachete +
+        "</strong> | Machetes restants: <strong>" + numMachetes + "</strong>";
+    videoCelebracio.load();
+    videoCelebracio.play();
+    videoOverlay.classList.add("actiu");
+}
+
+
+// ── INICIAR JOC ───────────────────────────────────────────────────────────────
+// Reseteja totes les variables i arrenca el nivell 1.
+function començarJoc() {
+    nivellActual = 1;
+    menjar = 10;
+    diners = 0;
+    teMechero = false;
+    numMachetes = 0;
+    killsMachete = 0;
+    interficie.style.display = "none";
+    carregarNivell(1);
+    jocActiu = true;
+    window.addEventListener("keydown", manejadorTeclat, false);
+}
+
+// ── CARREGAR NIVELL ───────────────────────────────────────────────────────────
+// Prepara el mapa, col·loca els policies i activa els intervals de moviment.
+function carregarNivell(n) {
+    netarIntervals();
+    velocitatPolicia = 800; // Reestableix la velocitat inicial dels policies
+
+    // Còpia profunda del mapa per no modificar l'original entre partides
+    mapaActual     = (n === 1) ? JSON.parse(JSON.stringify(mapa1)) : JSON.parse(JSON.stringify(mapa2));
+    // Matriu buida per als objectes dinàmics (amego, policies)
+    objectesActual = Array(10).fill().map(() => Array(10).fill(0));
+
+    if(n === 1) {
+        // ── NIVELL 1 ──────────────────────────────────────────────────────────
+        filaAmego = 8; columnaAmego = 1; // Posició inicial del jugador
+
+        // Posicions inicials dels 2 policies del nivell 1
+        policies1 = [
+            { fila: 4, columna: 4 },
+            { fila: 5, columna: 6 }
+        ];
+        policies1.forEach(function(p) { objectesActual[p.fila][p.columna] = POLICIA; });
+        missatgeJoc = "Nivell 1: Esquiva les 2 polis i arriba a CASA!";
+
+        // Interval principal: mou els policies i comprova fi de joc
+        intervalMovPolicia = setInterval(function() {
+            if(!jocActiu || menuPakiObert) return;
+            mourePolicies(policies1, false);
+            verificarFinals();
+            if(jocActiu) renderitzar();
+        }, velocitatPolicia);
+
+        // Interval d'acceleració: cada 5 segons els policies es mouen 150ms més ràpid
+        // fins arribar al límit de 200ms (5 cops abans del límit = 5 acceleracions màxim)
+        intervalVelocitat = setInterval(function() {
+            if(!jocActiu || nivellActual !== 1) return;
+            if(velocitatPolicia > 200) {
+                velocitatPolicia -= 150;
+                clearInterval(intervalMovPolicia);
+                intervalMovPolicia = setInterval(function() {
+                    if(!jocActiu || menuPakiObert) return;
+                    mourePolicies(policies1, false);
+                    verificarFinals();
+                    if(jocActiu) renderitzar();
+                }, velocitatPolicia);
+                missatgeJoc = "⚠️ La poli s'ha accelerat!";
+                renderitzar();
             }
-        break;
+        }, 5000);
 
-        case DOWN:
-            if(shipRow < ROWS - 1 ){
-                gameObjects[shipRow][shipColumn] = 0;
-                shipRow++;
-                gameObjects[shipRow][shipColumn] = SHIP;
-                food--;
-            }
-        break;
+    } else {
+        // ── NIVELL 2 ──────────────────────────────────────────────────────────
+        filaAmego = 8; columnaAmego = 1; // Posició inicial del jugador
+        missatgeJoc = "Nivell 2: Arriba al 🚬 SEGARRO! Vigila els 6 policies!";
+        policies2 = [];
 
-        case LEFT:
-            if(shipColumn > 0){
-                gameObjects[shipRow][shipColumn] = 0;
-                shipColumn--;
-                gameObjects[shipRow][shipColumn] = SHIP;
-                food--;
-            }
-        break;
+        // Per afegir o treure policies, modifica la llista de posicions {f, c} aquí.
+        // f = fila (1-8), c = columna (1-8). Evita [1][8] que és on hi ha el segarro.
+        [{f:4,c:4},{f:4,c:6},{f:6,c:4},{f:6,c:6},{f:2,c:2},{f:7,c:7}].forEach(function(p) {
+            policies2.push({ fila: p.f, columna: p.c });
+            objectesActual[p.f][p.c] = POLICIA;
+        });
 
-        case RIGHT:
-            if(shipColumn < COLUMNS - 1)
-            {
-                gameObjects[shipRow][shipColumn] = 0;
-                shipColumn++;
-                gameObjects[shipRow][shipColumn] = SHIP;
-                food--;
-            }
-        break;
+        // Interval de moviment dels policies del nivell 2 (velocitat fixa d'1 segon)
+        intervalPolicies2 = setInterval(function() {
+            if(!jocActiu || menuPakiObert) return;
+            mourePolicies(policies2, true); // true = no poden trepitjar el segarro
+            verificarFinals();
+            if(jocActiu) renderitzar();
+        }, 1000);
     }
 
-    switch(map[shipRow][shipColumn])
-    {
-        case WATER:
-            gameMessage = "You sail the open seas."
-        break;
-
-        case PIRATE:
-            fight();
-        break;
-
-        case ISLAND:
-            trade();
-        break;
-
-        case HOME:
-            endGame();
-        break;
-
-    }
-
-    moveMonster();
-
-    if(gameObjects[shipRow][shipColumn] === MONSTER)
-    {
-        endGame();
-    }
-    if(food <=0 || gold <=0)
-    {
-        endGame();
-    }
-
-    render();
-}
-
-function moveMonster(){
-
-    var UP = 1;
-    var DOWN = 2;
-    var LEFT = 3;
-    var RIGHT = 4;
-
-    var validDirections = [];
-
-    var direction = undefined;
-
-    if(monsterRow > 0)
-    {
-        var thingAbove = map[monsterRow - 1][monsterColumn];
-        if (thingAbove === WATER) validDirections.push(UP); 
-    }
-    if(monsterRow < ROWS -1)
-    {
-        var thingBelow = map[monsterRow + 1][monsterColumn];
-        if (thingBelow === WATER) validDirections.push(DOWN); 
-    }
-     if(monsterColumn > 0)
-    {
-        var thingToTheLeft = map[monsterRow][monsterColumn - 1];
-        if (thingToTheLeft === WATER) validDirections.push(LEFT); 
-    }
-     if(monsterColumn < COLUMNS - 1)
-    {
-        var thingToTheRight = map[monsterRow][monsterColumn + 1];
-        if (thingToTheRight === WATER) validDirections.push(RIGHT); 
-    }
-
-    var randomNumber = Math.floor(Math.random() * validDirections.length);
-    direction = validDirections[randomNumber];
-
-    gameObjects[monsterRow][monsterColumn] = 0;
-
-    switch(direction)
-    {
-        case UP:
-            //monsterRow--;
-            gameObjects[--monsterRow][monsterColumn] = MONSTER;
-        break;
-
-        case DOWN:
-            //monsterRow++;
-            gameObjects[++monsterRow][monsterColumn] = MONSTER;
-        break;
-
-        case LEFT:
-            //monsterColumn--;
-            gameObjects[monsterRow][--monsterColumn] = MONSTER;
-        break;
-
-        case RIGHT:
-            //monsterColumn++;
-            gameObjects[monsterRow][++monsterColumn] = MONSTER;
-        break;
-    }
-
+    // Col·loca el jugador al mapa i fa el primer renderitzat
+    objectesActual[filaAmego][columnaAmego] = AMEGO;
+    renderitzar();
 }
 
 
-function fight(){
-    var shipStrength = Math.ceil((food + gold) / 2);
+// ── MANEJADOR DE TECLAT ───────────────────────────────────────────────────────
+// Gestiona totes les tecles: moviment (fletxes), obrir Paki (ESPAI), tancar (ESC).
+function manejadorTeclat(e) {
+    if(!jocActiu && !menuPakiObert) return; // Ignora el teclat si el joc no és actiu
 
-    var pirateStrength = Math.ceil(Math.random() * shipStrength * 2);
-
-    if(pirateStrength > shipStrength)
-    {
-        var stolenGold = Math.round(pirateStrength / 2);
-        gold -= stolenGold;
-
-        experience += 1;
-
-        gameMessage = "You fight and LOSE " + stolenGold + " gold pieces."
-          + " Ship's strength: " + shipStrength
-          + " Pirate strength: " + pirateStrength;
-    }   
-    else
-    {
-        var pirateGold = Math.round(pirateStrength / 2);
-        gold += pirateGold;
-
-        experience += 2;
-
-        gameMessage = "You fight and WIN " + pirateGold + " gold pieces."
-          + " Ship's strength: " + shipStrength
-          + " Pirate strength: " + pirateStrength;
+    // ESC: tanca el menú Paki si és obert
+    if(e.keyCode === 27) {
+        e.preventDefault();
+        if(menuPakiObert) tancarMenuPaki();
+        return;
     }
+
+    // ESPAI: obre el menú Paki si el jugador és sobre una cel·la Paki
+    if(e.keyCode === 32) {
+        e.preventDefault();
+        if(!menuPakiObert && mapaActual[filaAmego][columnaAmego] === PAKI) obrirMenuPaki();
+        return;
+    }
+
+    if(menuPakiObert || !jocActiu) return; // Bloqueig addicional si el menú és obert
+
+    // Calcula la nova posició segons la tecla premuda (fletxes)
+    var nF = filaAmego, nC = columnaAmego;
+    if     (e.keyCode===38) nF--; // Amunt
+    else if(e.keyCode===40) nF++; // Avall
+    else if(e.keyCode===37) nC--; // Esquerra
+    else if(e.keyCode===39) nC++; // Dreta
+    else return;
+
+    e.preventDefault();
+
+    // Comprova que la nova posició és dins del mapa i no és un mur
+    if(nF >= 0 && nF < FILES && nC >= 0 && nC < COLUMNES && colisions[nF][nC] === 0) {
+        objectesActual[filaAmego][columnaAmego] = 0; // Esborra l'amego de la posició antiga
+        filaAmego = nF; columnaAmego = nC;
+        objectesActual[filaAmego][columnaAmego] = AMEGO; // Col·loca l'amego a la nova posició
+        menjar--; // Cada pas consumeix 1 de menjar
+        gestionarEsdeveniment(); // Comprova si hi ha alguna cosa a la nova cel·la
+    } else {
+        missatgeJoc = "Murs infranquejables!";
+    }
+
+    verificarFinals();
+    if(jocActiu) renderitzar();
 }
 
-function trade(){
-    //Figure out how much food the island have and the cost
-    var islandFood = experience + gold;
-    var cost = Math.ceil(Math.random() * islandFood);
-    
-    //Let the player buy food if there's enough gold
-    if (gold > cost)
-    {
-        food += islandFood;
-        gold -= cost;
-        experience += 2;
 
-        gameMessage = "you buy " + islandFood + " coconuts"
-           + " for " + cost + " gold pieces."
-    }
-    else
-    {   //Tell the player if he does not have enough gold
-        experience += 1;
-        gameMessage = "You don't have enough gold to buy food."
-    }
+// ── OBRIR / TANCAR MENÚ PAKI ──────────────────────────────────────────────────
+function obrirMenuPaki() {
+    menuPakiObert = true;
+    menuPaki.style.display = "block";
+    msgCompra.innerHTML = "";
+    missatgeJoc = "🏪 Benvingut a la tenda! Els polis esperaran. ESC per tancar.";
+    renderitzar();
 }
 
-function endGame(){
-    if(map[shipRow][shipColumn] === HOME)
-    {//Calculate the score
-        var score = food + gold+ experience;
+function tancarMenuPaki() {
+    menuPakiObert = false;
+    menuPaki.style.display = "none";
+    msgCompra.innerHTML = "";
+    missatgeJoc = "Has tancat la tenda.";
+    renderitzar();
+}
 
-        gameMessage = "You made it home ALIVE! " + "Final score: " + score;
-    }
-    if(gameObjects[shipRow][shipColumn] === MONSTER)
-    {
-       gameMessage = "Your ship has been swallowed by a sea monster!";
-    }
-    else
-    {
-        if(gold <= 0)
-        {
-            gameMessage += " You've run out of gold!";
+// ── COMPRAR AL PAKI ───────────────────────────────────────────────────────────
+// Gestiona les 3 compres possibles: menjar, mechero i machete.
+function comprarPaki(producte) {
+    if(producte === 'menjar') {
+        if(diners >= 1) {
+            diners -= 1; menjar += 3;
+            msgCompra.innerHTML = "<span class='positiu'>+3 menjar / -1€ ✔</span>";
+        } else {
+            msgCompra.innerHTML = "<span class='negatiu'>No tens diners! (cal 1€)</span>";
         }
-        else
-        {
-            gameMessage += " You've run out of food!";   
+    } else if(producte === 'mechero') {
+        if(teMechero) {
+            msgCompra.innerHTML = "<span class='negatiu'>Ja tens un mechero!</span>";
+        } else if(diners >= 10) {
+            diners -= 10; teMechero = true;
+            msgCompra.innerHTML = "<span class='positiu'>🔥 Mechero comprat! -10€ ✔</span>";
+        } else {
+            msgCompra.innerHTML = "<span class='negatiu'>No tens diners! (cal 10€)</span>";
         }
-
-        gameMessage += " Your crew throws you overboard!";
+    } else if(producte === 'machete') {
+        if(diners >= 20) {
+            diners -= 20; numMachetes++;
+            msgCompra.innerHTML = "<span class='positiu'>🔪 Machete comprat! -20€ ✔ (Tens " +
+                numMachetes + " machete" + (numMachetes > 1 ? "s" : "") + ")</span>";
+        } else {
+            msgCompra.innerHTML = "<span class='negatiu'>No tens diners! (cal 20€)</span>";
+        }
     }
-
-    //Remove the keyboard listener
-    window.removeEventListener("keydown", keydownHandler, false);
+    renderitzar();
 }
 
-function render()
-{
-    //Clear the stage of img tag cells from the previous turn
-    if(stage.hasChildNodes())
-    {
-        for (var i=0; i < ROWS * COLUMNS; i++)
-        {
-            stage.removeChild(stage.firstChild);
+
+// ── GESTIONAR ESDEVENIMENTS ───────────────────────────────────────────────────
+// S'executa cada cop que el jugador es mou a una nova cel·la.
+// Comprova si hi ha una Yaya, la Casa o el Segarro i actua en conseqüència.
+function gestionarEsdeveniment() {
+    var tipus = mapaActual[filaAmego][columnaAmego];
+
+    // Yaya: roba entre 4 i 20€ aleatòriament i la fa desaparèixer del mapa
+    if(tipus === YAYA) {
+        var d = Math.floor(Math.random() * 17) + 4;
+        diners += d;
+        missatgeJoc = "Has robat a la Yaya! <span class='positiu'>+" + d + "€</span>";
+        mapaActual[filaAmego][columnaAmego] = 0;
+    }
+
+    // Casa: portal al nivell 2 (només funciona al nivell 1)
+    if(tipus === CASA && nivellActual === 1) {
+        nivellActual = 2;
+        carregarNivell(2);
+    }
+
+    // Segarro: objectiu final. Cal tenir el mechero per poder guanyar.
+    if(tipus === SEGARRO) {
+        if(!teMechero) {
+            missatgeJoc = "🚬 Vols fumar però <span class='negatiu'>NO TENS MECHERO!</span> Compra'n un al Paki!";
+            return;
+        }
+        missatgeJoc = "🚬 Has encès el SEGARRO! HAS GUANYAT!";
+        fiDelJoc(true);
+    }
+}
+
+
+// ── MOURE POLICIES (funció unificada) ─────────────────────────────────────────
+// Mou cada policia de la llista en una direcció aleatòria (U/D/L/R).
+// Si la nova posició és un mur, el policia no es mou.
+// checkSegarro: si és true (nivell 2), els policies tampoc no poden trepitjar el segarro.
+function mourePolicies(llista, checkSegarro) {
+    llista.forEach(function(p) {
+        objectesActual[p.fila][p.columna] = 0; // Esborra el policia de la posició actual
+        var dirs = ["U","D","L","R"];
+        var d = dirs[Math.floor(Math.random()*4)]; // Escull una direcció aleatòria
+        var nf = p.fila, nc = p.columna;
+        if(d==="U") nf--; if(d==="D") nf++;
+        if(d==="L") nc--; if(d==="R") nc++;
+        // Mou el policia només si la nova posició és vàlida
+        if(nf>=0 && nf<FILES && nc>=0 && nc<COLUMNES
+           && colisions[nf][nc] === 0
+           && (!checkSegarro || mapaActual[nf][nc] !== SEGARRO)) {
+            p.fila = nf; p.columna = nc;
+        }
+        objectesActual[p.fila][p.columna] = POLICIA; // Col·loca el policia a la nova posició
+    });
+}
+
+
+// ── VERIFICAR FI DE JOC ───────────────────────────────────────────────────────
+// Comprova després de cada moviment (del jugador o dels policies) si s'ha complert
+// alguna condició de derrota: xoc amb policia o sense menjar.
+function verificarFinals() {
+    // Si el menú Paki está abierto, los polis no pueden matar
+    if(menuPakiObert) return;
+
+    // Nivell 1: xoc amb qualsevol policia = derrota immediata
+    if(nivellActual === 1) {
+        for(var i = 0; i < policies1.length; i++) {
+            if(filaAmego === policies1[i].fila && columnaAmego === policies1[i].columna) {
+                missatgeJoc = "La poli t'ha enxampat!";
+                fiDelJoc(false); return;
+            }
         }
     }
 
-    //Render the game by looping through the map arrays
-    for(var row = 0; row < ROWS; row++)
-    {
-        for(var column = 0; column < COLUMNS; column++)
-            {
-                var cell = document.createElement("img");
-                //Set its CSS class to "cell"
-                cell.setAttribute("class", "cell");
-                stage.appendChild(cell);
-
-                switch(map[row][column])
-                { 
-                    case WATER:
-                        cell.src = "images/water.png";
-                        break;
-                    case ISLAND:
-                        cell.src = "images/island.png";
-                        break;
-                    case PIRATE:
-                        cell.src = "images/pirate.png";
-                        break;
-                    case HOME:
-                        cell.src = "images/home.png";
-                        break;
+    // Nivell 2: xoc amb policia = usa un machete per matar-lo (si en tens)
+    //           Si no tens machetes = derrota
+    if(nivellActual === 2) {
+        for(var j = 0; j < policies2.length; j++) {
+            if(filaAmego === policies2[j].fila && columnaAmego === policies2[j].columna) {
+                if(numMachetes > 0) {
+                    numMachetes--;
+                    killsMachete++;
+                    objectesActual[policies2[j].fila][policies2[j].columna] = 0;
+                    policies2.splice(j, 1);
+                    missatgeJoc = "🔪 <span class='positiu'>Policia mort! (-1 machete)</span> Restants: " +
+                        policies2.length + " | Machetes: " + numMachetes;
+                    mostrarVideoKill();
+                    renderitzar();
+                    return;
+                } else {
+                    missatgeJoc = "Els policies t'han enxampat! (No tens machetes)";
+                    fiDelJoc(false); return;
                 }
-                switch(gameObjects[row][column])
-                { 
-                    case SHIP:
-                        cell.src = "images/ship.png";
-                        break;
-                    case MONSTER:
-                        cell.src = "images/monster.png";
-                        break;
-                }
-
-                //Position the cell
-                cell.style.top = row * SIZE + "px";
-                cell.style.left = column * SIZE + "px";
             }
+        }
     }
 
-    // Display the game gameMessage
-    output.innerHTML = gameMessage;
+    // Sense menjar = derrota (s'aplica a tots dos nivells)
+    if(menjar <= 0) {
+        missatgeJoc = "T'has quedat sense menjar!";
+        fiDelJoc(false);
+    }
+}
 
-    //Display the playter's food, gold aand experience
-    output.innerHTML += "<br>Gold: " + gold + ", Food: "
-        + food + ", Experience: " + experience;
+
+// ── FI DEL JOC ────────────────────────────────────────────────────────────────
+// v = true → victòria (mostra overlay verd)
+// v = false → derrota (mostra pantalla de "HAS PERDUT")
+function fiDelJoc(v) {
+    jocActiu = false;
+    netarIntervals();
+    menuPakiObert = false;
+    menuPaki.style.display = "none";
+
+    if(v) {
+        var overlay = document.getElementById("victoria-overlay");
+        var vid     = document.getElementById("video-victoria");
+        overlay.classList.add("actiu");
+        vid.load();
+        vid.play();
+    } else {
+        interficie.style.display = "flex";
+        document.querySelector("#titol-pantalla").innerHTML   = "HAS PERDUT";
+        document.querySelector("#titol-pantalla").style.color = "#e74c3c";
+    }
+}
+
+
+// ── RENDERITZAR ───────────────────────────────────────────────────────────────
+// Dibuixa l'estat actual del joc: mou la càmera, crea els sprites i actualitza el marcador.
+// S'executa després de cada moviment (jugador o policies).
+function renderitzar() {
+    mon.innerHTML = ""; // Esborra tots els sprites anteriors
+
+    // Càlcul de la càmera: centra la vista al voltant del jugador
+    // camX/camY és la cel·la superior esquerra visible (màxim 6×6 cel·les)
+    var camX = Math.max(0, Math.min(columnaAmego - 3, COLUMNES - 6));
+    var camY = Math.max(0, Math.min(filaAmego - 3, FILES - 6));
+    mon.style.transform = "translate(" + (-camX * MIDA) + "px, " + (-camY * MIDA) + "px)";
+
+    // Recorre tot el mapa i crea un <img> per a cada objecte visible
+    for(var f = 0; f < FILES; f++) {
+        for(var c = 0; c < COLUMNES; c++) {
+            var o = objectesActual[f][c]; // Objectes dinàmics (amego, policies)
+            var m = mapaActual[f][c];     // Objectes estàtics (yayes, paki, casa, segarro)
+            if(!o && !m) continue;        // Cel·la buida, no cal crear cap element
+
+            var img = document.createElement("img");
+            img.className = "cel·la";
+            img.style.top  = f * MIDA + "px";
+            img.style.left = c * MIDA + "px";
+
+            // Assigna la imatge corresponent segons el tipus
+            if     (o === AMEGO)   img.src = "images/Amego.png";
+            else if(o === POLICIA) img.src = "images/Policia.png";
+            else if(m === YAYA)    img.src = "images/Yaya.png";
+            else if(m === PAKI)    img.src = "images/Paki.png";
+            else if(m === CASA)    img.src = "images/Casa.png";
+            else if(m === SEGARRO) { img.src = "images/segarro.png"; img.classList.add("segarro-glow"); }
+
+            mon.appendChild(img);
+        }
+    }
+
+    // Construeix la cadena de l'inventari (mechero i machetes si es tenen)
+    var invStr = "";
+    if(teMechero)       invStr += " | 🔥 Mechero";
+    if(numMachetes > 0) invStr += " | 🔪×" + numMachetes;
+
+    r_recursos.innerHTML = "Diners: " + diners + "€<br>Menjar: " + menjar + (invStr ? "<br>" + invStr : "");
+    n_viu.innerHTML      = "Nivell: " + nivellActual;
+    sortida.innerHTML    = missatgeJoc;
 }
 
 </script>
+
+</body>
+</html>
